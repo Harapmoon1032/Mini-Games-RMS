@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>History Archery Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(#87CEEB, #E0FFFF);
+            perspective: 1000px;
+        }
+        
+        #question-container {
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 24px;
+            z-index: 10;
+            width: 80%;
+            max-width: 800px;
+        }
+        
+        .target-container {
+            position: absolute;
+            top: 30%;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 150px;
+            padding: 0 20px;
+        }
+        
+        .target {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, #FF0000 30%, #FFFFFF 31%, #FFFFFF 40%, #0000FF 41%, #0000FF 50%, #FFFFFF 51%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: crosshair;
+            transition: transform 0.3s;
+        }
+        
+        .target:hover {
+            transform: scale(1.1);
+        }
+        
+        .answer-text {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 18px;
+            position: absolute;
+            width: 100%;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+        
+        #bow-container {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translate(-50%, 0);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 120px;
+            height: 120px;
+        }
+        
+        /* Custom bow SVG */
+        #bow-svg {
+            width: 100px;
+            height: 100px;
+            position: absolute;
+            transform-origin: center;
+            transition: transform 0.2s;
+        }
+        
+        #bow-string {
+            stroke: #000;
+            stroke-width: 2;
+            fill: none;
+            transition: d 0.2s ease-in-out;
+        }
+        
+        #bow-body {
+            stroke: #8B4513;
+            stroke-width: 6;
+            fill: none;
+        }
+        
+        /* Arrow style */
+        #arrow-svg {
+            position: absolute;
+            width: 70px;
+            height: 20px;
+            transform-origin: center;
+            display: none;
+            top: 50%;
+            left: 50%;
+            margin-top: -10px;
+            margin-left: -35px;
+        }
+        
+        #arrow-shaft {
+            stroke: #8B4513;
+            stroke-width: 4;
+            stroke-linecap: round;
+        }
+        
+        #arrow-head {
+            fill: #8B4513;
+            stroke: none;
+        }
+        
+        #arrow-fletching {
+            fill: #FF0000;
+            stroke: none;
+        }
+        
+        #score {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        #win-message {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 128, 0, 0.9);
+            color: white;
+            padding: 30px 50px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 24px;
+            z-index: 1000;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .game-button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            font-size: 18px;
+            background: #FFD700;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin: 10px;
+        }
+
+        .game-button:hover {
+            background: #FFC600;
+        }
+        
+        #button-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        #exit-button {
+            background: #FF6347;
+        }
+        
+        #exit-button:hover {
+            background: #FF4500;
+        }
+        
+        /* Flying arrow style */
+        .flying-arrow {
+            position: fixed;
+            pointer-events: none;
+            z-index: 200;
+        }
+
+        #question-count {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="score">Skor: 0 / 50</div>
+        <div id="question-count">Pertanyaan: 1 / 5</div>
+        <div id="question-container">Loading...</div>
+        <div class="target-container"></div>
+        <div id="bow-container">
+            <!-- Custom bow SVG -->
+            <svg id="bow-svg" viewBox="0 0 100 100">
+                <path id="bow-body" d="M 30,10 Q 80,50 30,90" />
+                <path id="bow-string" d="M 30,10 L 30,90" />
+            </svg>
+            
+            <!-- Custom arrow SVG -->
+            <svg id="arrow-svg" viewBox="0 0 70 20">
+                <line id="arrow-shaft" x1="5" y1="10" x2="60" y2="10" />
+                <polygon id="arrow-head" points="60,5 70,10 60,15" />
+                <polygon id="arrow-fletching" points="5,5 15,10 5,15" />
+            </svg>
+        </div>
+    </div>
+    <div id="win-message">
+        Selamat! Anda telah menyelesaikan permainan!
+        <br>
+        <div id="final-score"></div>
+        <div id="button-container">
+            <button id="restart-button" class="game-button">Main Lagi</button>
+            <button id="exit-button" class="game-button">Keluar</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let currentQuestion = {};
+        let canShoot = true;
+        let isAiming = false;
+        const MAX_SCORE = 50;
+        let usedQuestions = [];
+        let questionCount = 0;
+        const TOTAL_QUESTIONS = 5;
+        
+        const questions = [
+            {
+                question: "Siapakah Nama Julukan Raden Mas Said atau Mangkunegara I di Medan Pertempuran?",
+                correctAnswer: "Pangeran Samber Nyawa",
+                wrongAnswer: "Pangeran Sabrang Lor"
+            },
+            {
+                question: "Desa Manakah yang menjadi basis perjuangan Mangkunegara I  di Wonogiri?",
+                correctAnswer: "Nglaroh",
+                wrongAnswer: "Jendi"
+            },
+            {
+                question: "Siapakah Nama Istri Mangkunegara I ?",
+                correctAnswer: "Raden Ayu Matah Ati",
+                wrongAnswer: "Raden Ayu Matah Jiwa"
+            },
+            {
+                question: "Di sendang manakah Raden Mas Said mendapatkan inspirasi tentang taktik dan keberanian  perang melawan Belanda dari perkelahian dua ekor kerbau?",
+                correctAnswer: "Sendang Siwani",
+                wrongAnswer: "Sendang Sinangka"
+            },
+            {
+                question: "Apakah nama pasukan yang mendukung perjuangan Mangkunegara I dalam melawan Belanda?",
+                correctAnswer: "Punggowo Baku Kawandoso Joyo",
+                wrongAnswer: "Punggowo Baku Kawandoso Mulyo"
+            },
+        ];
+
+        function getRandomQuestion() {
+            // If all questions have been used, reset the used questions array
+            if (usedQuestions.length >= questions.length) {
+                usedQuestions = [];
+            }
+            
+            // Filter out questions that have already been used
+            const availableQuestions = questions.filter(q => !usedQuestions.includes(q));
+            
+            // If no available questions, reset and use all questions
+            if (availableQuestions.length === 0) {
+                usedQuestions = [];
+                return questions[Math.floor(Math.random() * questions.length)];
+            }
+            
+            // Select a random question from available questions
+            const selectedQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+            usedQuestions.push(selectedQuestion);
+            
+            return selectedQuestion;
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = `Skor: ${score} / ${MAX_SCORE}`;
+        }
+
+        function updateQuestionCount() {
+            document.getElementById('question-count').textContent = `Pertanyaan: ${questionCount} / ${TOTAL_QUESTIONS}`;
+        }
+
+        function showResultMessage() {
+            document.getElementById('final-score').textContent = `Skor Anda: ${score} dari ${MAX_SCORE}`;
+            document.getElementById('win-message').style.display = 'block';
+            canShoot = false;
+        }
+
+        function setupTargets(question) {
+            const container = document.querySelector('.target-container');
+            container.innerHTML = '';
+            
+            const answers = [question.correctAnswer, question.wrongAnswer];
+            shuffleArray(answers);
+            
+            answers.forEach((answer) => {
+                const target = document.createElement('div');
+                target.className = 'target';
+                
+                const answerText = document.createElement('div');
+                answerText.className = 'answer-text';
+                answerText.textContent = answer;
+                target.appendChild(answerText);
+                
+                target.addEventListener('click', () => {
+                    if (canShoot && isAiming) shootArrow(target, answer === question.correctAnswer);
+                });
+                
+                container.appendChild(target);
+            });
+        }
+
+        // Track mouse position for bow and arrow movement
+        document.addEventListener('mousemove', (e) => {
+            if (!canShoot) return;
+            
+            const bowContainer = document.getElementById('bow-container');
+            const bowSvg = document.getElementById('bow-svg');
+            const bowString = document.getElementById('bow-string');
+            const arrowSvg = document.getElementById('arrow-svg');
+            
+            // Get center position of bow container
+            const bowRect = bowContainer.getBoundingClientRect();
+            const bowCenterX = bowRect.left + bowRect.width / 2;
+            const bowCenterY = bowRect.top + bowRect.height / 2;
+            
+            // Calculate angle from bow to mouse
+            const dx = e.clientX - bowCenterX;
+            const dy = e.clientY - bowCenterY;
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            
+            // Rotate bow and arrow to point at cursor
+            bowSvg.style.transform = `rotate(${angle}deg)`;
+            arrowSvg.style.transform = `rotate(${angle}deg)`;
+            
+            // Show and position arrow when mouse is over a target
+            const targets = document.querySelectorAll('.target');
+            let isOverTarget = false;
+            
+            targets.forEach((target) => {
+                const targetRect = target.getBoundingClientRect();
+                if (
+                    e.clientX >= targetRect.left &&
+                    e.clientX <= targetRect.right &&
+                    e.clientY >= targetRect.top &&
+                    e.clientY <= targetRect.bottom
+                ) {
+                    isOverTarget = true;
+                    // Pull the bow string back when aiming
+                    bowString.setAttribute('d', 'M 30,10 Q 20,50 30,90');
+                    arrowSvg.style.display = 'block';
+                    isAiming = true;
+                }
+            });
+            
+            if (!isOverTarget && isAiming) {
+                // Return string to normal position
+                bowString.setAttribute('d', 'M 30,10 L 30,90');
+                arrowSvg.style.display = 'none';
+                isAiming = false;
+            }
+        });
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function shootArrow(target, isCorrect) {
+            if (!canShoot || !isAiming) return;
+            canShoot = false;
+            
+            const bowContainer = document.getElementById('bow-container');
+            const bowSvg = document.getElementById('bow-svg');
+            const bowString = document.getElementById('bow-string');
+            const arrowSvg = document.getElementById('arrow-svg');
+            
+            const bowRect = bowContainer.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            
+            // Create a flying arrow element
+            const flyingArrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            flyingArrow.setAttribute("viewBox", "0 0 70 20");
+            flyingArrow.classList.add("flying-arrow");
+            flyingArrow.style.width = "70px";
+            flyingArrow.style.height = "20px";
+            
+            // Create arrow parts
+            const arrowShaft = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            arrowShaft.setAttribute("x1", "5");
+            arrowShaft.setAttribute("y1", "10");
+            arrowShaft.setAttribute("x2", "60");
+            arrowShaft.setAttribute("y2", "10");
+            arrowShaft.setAttribute("stroke", "#8B4513");
+            arrowShaft.setAttribute("stroke-width", "4");
+            arrowShaft.setAttribute("stroke-linecap", "round");
+            
+            const arrowHead = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            arrowHead.setAttribute("points", "60,5 70,10 60,15");
+            arrowHead.setAttribute("fill", "#8B4513");
+            
+            const arrowFletching = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            arrowFletching.setAttribute("points", "5,5 15,10 5,15");
+            arrowFletching.setAttribute("fill", "#FF0000");
+            
+            flyingArrow.appendChild(arrowShaft);
+            flyingArrow.appendChild(arrowHead);
+            flyingArrow.appendChild(arrowFletching);
+            
+            document.body.appendChild(flyingArrow);
+            
+            // Calculate position and angle for animation
+            const dx = targetRect.left + targetRect.width/2 - (bowRect.left + bowRect.width/2);
+            const dy = targetRect.top + targetRect.height/2 - (bowRect.top + bowRect.height/2);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Position flying arrow at the center of bow
+            flyingArrow.style.left = (bowRect.left + bowRect.width/2 - 35) + "px"; // Center horizontally
+            flyingArrow.style.top = (bowRect.top + bowRect.height/2 - 10) + "px";  // Center vertically
+            flyingArrow.style.transform = `rotate(${angle}deg)`;
+            
+            // Animate string release
+            bowString.setAttribute('d', 'M 30,10 L 30,90');
+            arrowSvg.style.display = 'none';
+            
+            // Animation parameters
+            const duration = distance / 800;
+            const startTime = performance.now();
+            
+            // Animate arrow flight
+            function animateArrow(timestamp) {
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / (duration * 1000), 1);
+                
+                // Calculate position from center of bow to center of target
+                const currentX = bowRect.left + bowRect.width/2 - 35 + progress * dx;
+                const currentY = bowRect.top + bowRect.height/2 - 10 + progress * dy;
+                
+                flyingArrow.style.left = currentX + "px";
+                flyingArrow.style.top = currentY + "px";
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animateArrow);
+                } else {
+                    // Arrow has reached target
+                    flyingArrow.remove();
+                    
+                    if (isCorrect) {
+                        score += 10;
+                        updateScore();
+                        target.style.background = '#00FF00';
+                    } else {
+                        target.style.background = '#FF0000';
+                    }
+                    
+                    // Count this question as answered, regardless of correctness
+                    questionCount++;
+                    updateQuestionCount();
+                    
+                    setTimeout(() => {
+                        // Check if all questions have been answered
+                        if (questionCount >= TOTAL_QUESTIONS) {
+                            showResultMessage();
+                        } else {
+                            newRound();
+                        }
+                    }, 1500);
+                }
+            }
+            
+            requestAnimationFrame(animateArrow);
+        }
+
+        function newRound() {
+            currentQuestion = getRandomQuestion();
+            document.getElementById('question-container').textContent = currentQuestion.question;
+            setupTargets(currentQuestion);
+            canShoot = true;
+            isAiming = false;
+            document.getElementById('bow-string').setAttribute('d', 'M 30,10 L 30,90');
+            document.getElementById('arrow-svg').style.display = 'none';
+        }
+
+        function restartGame() {
+            score = 0;
+            questionCount = 0;
+            updateScore();
+            updateQuestionCount();
+            document.getElementById('win-message').style.display = 'none';
+            canShoot = true;
+            usedQuestions = []; // Reset used questions
+            newRound();
+        }
+
+        function exitGame() {
+            // Display a confirmation before exiting
+            if (confirm("Apakah Anda yakin ingin keluar dari permainan?")) {
+                // Closing browser window/tab
+                window.close();
+                
+                // In case window.close() doesn't work (modern browsers often block it)
+                document.body.innerHTML = `
+                    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; background: linear-gradient(#87CEEB, #E0FFFF);">
+                        <h1 style="font-size: 36px; color: #333; margin-bottom: 20px;">Terima Kasih Sudah Bermain!</h1>
+                        <p style="font-size: 24px; color: #333; margin-bottom: 20px;">Skor akhir Anda: ${score}</p>
+                        <button onclick="location.reload()" style="padding: 15px 30px; font-size: 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Mulai Baru</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Add event listeners for buttons
+        document.getElementById('restart-button').addEventListener('click', restartGame);
+        document.getElementById('exit-button').addEventListener('click', exitGame);
+        
+        // Initialize score display
+        updateScore();
+        updateQuestionCount();
+        
+        // Start game
+        newRound();
+    </script>
+</body>
+</html>
