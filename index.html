@@ -47,7 +47,7 @@
             font-weight: bold;
         }
         
-        .form-group input, .form-group select {
+        .form-group input {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
@@ -75,7 +75,7 @@
             position: relative;
             width: 100vw;
             height: 100vh;
-            background-image: url(bg1.jpg); /* Will be replaced with actual image */
+            background-image: url(bg1.jpg); /* Placeholder background */
             background-size: cover;
             background-position: center;
             perspective: 1000px;
@@ -167,7 +167,7 @@
         
         #bow-container {
             position: fixed;
-            bottom: 50px; /* Moved lower from 100px to 80px */
+            bottom: 80px; /* Moved lower from 100px to 80px */
             left: 50%;
             transform: translate(-50%, 0);
             z-index: 100;
@@ -327,6 +327,21 @@
             pointer-events: none;
             z-index: 200;
         }
+        
+        /* Screenshot notification */
+        #screenshot-notification {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            font-size: 20px;
+            z-index: 2000;
+        }
     </style>
 </head>
 <body>
@@ -336,24 +351,6 @@
             <div class="form-group">
                 <label for="player-name">Nama:</label>
                 <input type="text" id="player-name" placeholder="Masukkan nama Anda" required>
-            </div>
-            <div class="form-group">
-                <label for="player-class">Kelas:</label>
-                <select id="player-class" required>
-                    <option value="">-- Pilih Kelas --</option>
-                    <option value="X IPA 1">X IPA 1</option>
-                    <option value="X IPA 2">X IPA 2</option>
-                    <option value="X IPS 1">X IPS 1</option>
-                    <option value="X IPS 2">X IPS 2</option>
-                    <option value="XI IPA 1">XI IPA 1</option>
-                    <option value="XI IPA 2">XI IPA 2</option>
-                    <option value="XI IPS 1">XI IPS 1</option>
-                    <option value="XI IPS 2">XI IPS 2</option>
-                    <option value="XII IPA 1">XII IPA 1</option>
-                    <option value="XII IPA 2">XII IPA 2</option>
-                    <option value="XII IPS 1">XII IPS 1</option>
-                    <option value="XII IPS 2">XII IPS 2</option>
-                </select>
             </div>
             <button id="start-game-btn">Mulai Permainan</button>
         </div>
@@ -384,15 +381,14 @@
         <h2>Selamat! Anda telah menyelesaikan permainan!</h2>
         <div id="final-score"></div>
         <div id="leaderboard">
-            <h3>Papan Peringkat</h3>
+            <h3>Papan Peringkat Hari Ini</h3>
             <table class="leaderboard-table">
                 <thead>
                     <tr>
                         <th>Peringkat</th>
                         <th>Nama</th>
-                        <th>Kelas</th>
                         <th>Skor</th>
-                        <th>Tanggal</th>
+                        <th>Waktu</th>
                     </tr>
                 </thead>
                 <tbody id="leaderboard-body">
@@ -405,11 +401,14 @@
             <button id="exit-button" class="game-button">Keluar</button>
         </div>
     </div>
+    
+    <div id="screenshot-notification">
+        Screenshot berhasil diambil!
+    </div>
 
     <script>
         // Player data
         let playerName = "";
-        let playerClass = "";
         let score = 0;
         let currentQuestion = {};
         let canShoot = true;
@@ -504,12 +503,14 @@
             document.getElementById('question-count').textContent = `Pertanyaan: ${questionCount} / ${TOTAL_QUESTIONS}`;
         }
 
-        // Function to format current date as DD/MM/YYYY
+        // Function to format current date and time
         function formatDate(date) {
             const day = String(date.getDate()).padStart(2, '0');
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const year = date.getFullYear();
-            return `${day}/${month}/${year}`;
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
         }
         
         // Function to save score to "database" (simulated)
@@ -520,9 +521,9 @@
             // Create a player record
             const playerRecord = {
                 name: playerName,
-                class: playerClass,
                 score: score,
-                date: formattedDate,
+                date: formattedDate.split(' ')[0], // Just the date part
+                time: formattedDate.split(' ')[1], // Just the time part
                 timestamp: today.getTime() // For sorting
             };
             
@@ -533,10 +534,10 @@
             // Sort the leaderboard by score (highest first)
             leaderboardData.sort((a, b) => b.score - a.score);
             
-            // Here you would normally send data to a Google Sheet or database
+            // Here you would normally send data to a database
             console.log("Score saved:", playerRecord);
             
-            // For demo purposes, simulate some other players from the same class
+            // For demo purposes, simulate some other players from today
             if (leaderboardData.length === 1) {
                 simulateOtherPlayers();
             }
@@ -544,42 +545,30 @@
         
         // Simulate other players for demonstration
         function simulateOtherPlayers() {
-            const names = ["Andi", "Budi", "Cindy", "Dodi", "Eka", "Fitra", "Gita", "Hadi"];
-            const classes = ["X IPA 1", "X IPA 2", "X IPS 1", "XI IPA 1", "XI IPS 1", "XII IPA 1"];
+            const names = ["Andi", "Budi", "Cindy", "Dodi", "Eka", "Fitra", "Gita", "Hadi", "Ira", "Joko"];
             const today = new Date();
-            const formattedDate = formatDate(today);
+            const formattedDate = formatDate(today).split(' ')[0]; // Just the date part
             
             // Add random scores for other players
             for (let i = 0; i < 10; i++) {
                 const randomName = names[Math.floor(Math.random() * names.length)];
-                const randomClass = playerClass; // Same class for half
                 const randomScore = Math.floor(Math.random() * 100) + 1;
+                
+                // Generate random time within today
+                const randomHour = Math.floor(Math.random() * 24);
+                const randomMinute = Math.floor(Math.random() * 60);
+                const randomTime = `${String(randomHour).padStart(2, '0')}:${String(randomMinute).padStart(2, '0')}`;
+                
+                // Create timestamp for proper sorting
+                const randomTimestamp = new Date();
+                randomTimestamp.setHours(randomHour, randomMinute);
                 
                 leaderboardData.push({
                     name: randomName,
-                    class: randomClass,
                     score: randomScore,
                     date: formattedDate,
-                    timestamp: today.getTime() - Math.floor(Math.random() * 86400000) // Random time today
-                });
-            }
-            
-            // Add some students from other classes
-            for (let i = 0; i < 5; i++) {
-                const randomName = names[Math.floor(Math.random() * names.length)];
-                let randomClass;
-                do {
-                    randomClass = classes[Math.floor(Math.random() * classes.length)];
-                } while (randomClass === playerClass);
-                
-                const randomScore = Math.floor(Math.random() * 100) + 1;
-                
-                leaderboardData.push({
-                    name: randomName,
-                    class: randomClass,
-                    score: randomScore,
-                    date: formattedDate,
-                    timestamp: today.getTime() - Math.floor(Math.random() * 86400000)
+                    time: randomTime,
+                    timestamp: randomTimestamp.getTime()
                 });
             }
             
@@ -594,18 +583,18 @@
             
             // Get today's date for filtering
             const today = new Date();
-            const formattedToday = formatDate(today);
+            const formattedToday = formatDate(today).split(' ')[0]; // Just the date part
             
-            // Filter for today's records and the player's class
-            const todaysClassRecords = leaderboardData.filter(record => 
-                record.date === formattedToday && record.class === playerClass
+            // Filter for today's records
+            const todaysRecords = leaderboardData.filter(record => 
+                record.date === formattedToday
             );
             
             // Sort by score
-            todaysClassRecords.sort((a, b) => b.score - a.score);
+            todaysRecords.sort((a, b) => b.score - a.score);
             
             // Add rows to the table
-            todaysClassRecords.forEach((record, index) => {
+            todaysRecords.forEach((record, index) => {
                 const row = document.createElement('tr');
                 
                 // Highlight the current player
@@ -616,13 +605,29 @@
                 row.innerHTML = `
                     <td>${index + 1}</td>
                     <td>${record.name}</td>
-                    <td>${record.class}</td>
                     <td>${record.score}</td>
-                    <td>${record.date}</td>
+                    <td>${record.time}</td>
                 `;
                 
                 leaderboardBody.appendChild(row);
             });
+        }
+        
+        // Function to take a screenshot of the leaderboard
+        function takeScreenshot() {
+            // For security reasons, browsers don't allow direct access to take screenshots
+            // This is just a simulation of that functionality
+            const notification = document.getElementById('screenshot-notification');
+            notification.style.display = 'block';
+            
+            // Hide the notification after 3 seconds
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+            
+            // In a real application, you might want to use a library like html2canvas
+            // or implement a server-side solution to take actual screenshots
+            console.log("Screenshot would be taken here in a real application");
         }
         
         function showResultMessage() {
@@ -638,6 +643,9 @@
             // Show the win message with leaderboard
             document.getElementById('win-message').style.display = 'block';
             canShoot = false;
+            
+            // Take a screenshot after a short delay (to ensure the leaderboard is fully rendered)
+            setTimeout(takeScreenshot, 500);
         }
 
         function setupTargets(question) {
@@ -722,6 +730,7 @@
             }
         }
 
+        // Function to handle shooting arrow at a target
         function shootArrow(target, isCorrect) {
             if (!canShoot || !isAiming) return;
             canShoot = false;
@@ -796,30 +805,33 @@
                 flyingArrow.style.left = currentX + "px";
                 flyingArrow.style.top = currentY + "px";
                 
+            
                 if (progress < 1) {
                     requestAnimationFrame(animateArrow);
                 } else {
-                    // Arrow has reached target
-                    flyingArrow.remove();
+                    // Arrow reached target
+                    document.body.removeChild(flyingArrow);
                     
+                    // Highlight target and show if answer was correct
                     if (isCorrect) {
-                        score += 10;
+                        target.style.background = 'radial-gradient(circle, #00FF00 50%, #FFFFFF 51%)';
+                        score += 10; // Add 10 points for correct answer
                         updateScore();
-                        target.style.background = '#00FF00';
                     } else {
-                        target.style.background = '#FF0000';
+                        target.style.background = 'radial-gradient(circle, #FF0000 50%, #FFFFFF 51%)';
+                        // No points for wrong answer
                     }
                     
-                    // Count this question as answered, regardless of correctness
-                    questionCount++;
-                    updateQuestionCount();
-                    
+                    // Move to next question after a delay
                     setTimeout(() => {
-                        // Check if all questions have been answered
+                        questionCount++;
+                        updateQuestionCount();
+                        
                         if (questionCount >= TOTAL_QUESTIONS) {
+                            // End of game
                             showResultMessage();
                         } else {
-                            newRound();
+                            setupNewQuestion();
                         }
                     }, 1500);
                 }
@@ -828,117 +840,63 @@
             requestAnimationFrame(animateArrow);
         }
 
-        function newRound() {
+        function setupNewQuestion() {
             currentQuestion = getRandomQuestion();
             document.getElementById('question-container').textContent = currentQuestion.question;
             setupTargets(currentQuestion);
-            canShoot = true;
+            canShoot = true; // Allow shooting again
             isAiming = false;
-            document.getElementById('bow-string').setAttribute('d', 'M 30,10 L 30,90');
-            document.getElementById('arrow-svg').style.display = 'none';
         }
 
-        function restartGame() {
-            score = 0;
-            questionCount = 0;
-            updateScore();
-            updateQuestionCount();
-            document.getElementById('win-message').style.display = 'none';
-            canShoot = true;
-            usedQuestions = []; // Reset used questions
-            newRound();
-        }
-
-        function exitGame() {
-            // Display a confirmation before exiting
-            if (confirm("Apakah Anda yakin ingin keluar dari permainan?")) {
-                // Closing browser window/tab
-                window.close();
-                
-                // In case window.close() doesn't work (modern browsers often block it)
-                document.body.innerHTML = `
-                    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; background: linear-gradient(#87CEEB, #E0FFFF);">
-                        <h1 style="font-size: 36px; color: #333; margin-bottom: 20px;">Terima Kasih Sudah Bermain!</h1>
-                        <p style="font-size: 24px; color: #333; margin-bottom: 20px;">Skor akhir Anda: ${score}</p>
-                        <button onclick="location.reload()" style="padding: 15px 30px; font-size: 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Mulai Baru</button>
-                    </div>
-                `;
-            }
-        }
-        
-        // Function to submit score to a Google Sheet (would need to be implemented with Google Apps Script)
-        function submitScoreToSheet() {
-            // This is a placeholder for a function that would send data to Google Sheets
-            // In a real application, you would create a Google Apps Script Web App
-            // and then use fetch() to send data to it
-            
-            // Example (commented out as it needs a real endpoint):
-            /*
-            fetch('YOUR_GOOGLE_SCRIPT_URL', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: playerName,
-                    class: playerClass,
-                    score: score,
-                    date: formatDate(new Date())
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Success:', data);
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-            });
-            */
-            
-            // For now, just log the data
-            console.log("Score to submit:", {
-                name: playerName,
-                class: playerClass,
-                score: score,
-                date: formatDate(new Date())
-            });
-        }
-
-        // Add event listeners for buttons
-        document.getElementById('restart-button').addEventListener('click', restartGame);
-        document.getElementById('exit-button').addEventListener('click', exitGame);
-        
-        // Initialize score display
-        updateScore();
-        updateQuestionCount();
-        
-        // Start button event handler
-        document.getElementById('start-game-btn').addEventListener('click', function() {
-            // Get player information
+        // Initialize game when player submits name
+        document.getElementById('start-game-btn').addEventListener('click', () => {
             playerName = document.getElementById('player-name').value.trim();
-            playerClass = document.getElementById('player-class').value;
             
-            // Validate form
-            if (playerName === '' || playerClass === '') {
-                alert('Silahkan isi nama dan kelas Anda!');
+            if (playerName === '') {
+                alert('Silakan masukkan nama Anda terlebih dahulu!');
                 return;
             }
             
-            // Hide registration form and show game
+            // Hide registration, show game
             document.getElementById('registration-container').style.display = 'none';
             document.getElementById('game-container').style.display = 'block';
             
-            // Start the game
-            newRound();
+            // Start game
+            score = 0;
+            questionCount = 1;
+            updateScore();
+            updateQuestionCount();
+            setupNewQuestion();
         });
-        
-        // Set the background image to the arena scene
-        window.onload = function() {
-            // You would need to replace this with actual image data
-            // For now we'll use a placeholder comment to note where the image should be
-            // document.getElementById('game-container').style.backgroundImage = `url(your-arena-image.jpg)`;
+
+        // Event listeners for end game buttons
+        document.getElementById('restart-button').addEventListener('click', () => {
+            document.getElementById('win-message').style.display = 'none';
             
-            // Focus on the name input when the page loads
+            // Reset game
+            score = 0;
+            questionCount = 1;
+            updateScore();
+            updateQuestionCount();
+            setupNewQuestion();
+        });
+
+        document.getElementById('exit-button').addEventListener('click', () => {
+            document.getElementById('win-message').style.display = 'none';
+            document.getElementById('game-container').style.display = 'none';
+            document.getElementById('registration-container').style.display = 'flex';
+            document.getElementById('player-name').value = '';
+        });
+
+        // Initialize registration form
+        document.getElementById('player-name').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('start-game-btn').click();
+            }
+        });
+
+        // Auto-focus on player name input
+        window.onload = () => {
             document.getElementById('player-name').focus();
         };
     </script>
